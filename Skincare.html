@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Skincare Assistent</title>
+    
+    <!-- PWA & Mobile App Enhancements -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4A4F3B">
+    <link rel="manifest" id="manifest">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234A4F3B%22></rect><text x=%2250%%22 y=%2250%%22 font-size=%2250%22 fill=%22%23F5F1E8%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22serif%22>S</text></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-creme: #F5F1E8;
+            --bg-olive: #4A4F3B;
+            --text-creme-light: #F5F1E8;
+            --text-creme-dark: #DCD6C8;
+            --text-olive-deep: #3B3F2F;
+            --accent-orange: #D97706;
+            --border-orange-soft: #FDBA74;
+            --font-serif: 'Lora', serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+        html, body {
+             overscroll-behavior: none;
+        }
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-creme);
+            color: var(--text-olive-deep);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .app-card {
+            background-color: var(--bg-olive);
+            color: var(--text-creme-light);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.1);
+        }
+        .app-header h1 {
+            font-family: var(--font-serif);
+        }
+        .nav-button {
+            transition: all 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        .nav-button.active {
+            background-color: var(--accent-orange);
+            color: white;
+            border-color: var(--border-orange-soft);
+        }
+        .nav-button:not(.active):hover {
+            background-color: rgba(245, 241, 232, 0.1);
+        }
+        .day-nav, .time-nav {
+            background-color: var(--bg-olive);
+            color: var(--text-creme-dark);
+        }
+        .install-guide {
+            background-color: #fff;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md">
+        <!-- Navigation -->
+        <nav class="mb-4 space-y-2">
+            <div class="time-nav flex justify-center items-center p-2 rounded-xl space-x-2">
+                <button data-time="morgen" class="nav-button font-semibold py-2 flex-1 rounded-lg text-sm">Morgen</button>
+                <button data-time="abend" class="nav-button font-semibold py-2 flex-1 rounded-lg text-sm">Abend</button>
+            </div>
+            <div class="day-nav flex justify-between items-center p-2 rounded-xl">
+                <button data-day="1" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">Mo</button>
+                <button data-day="2" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">Di</button>
+                <button data-day="3" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">Mi</button>
+                <button data-day="4" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">Do</button>
+                <button data-day="5" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">Fr</button>
+                <button data-day="6" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">Sa</button>
+                <button data-day="0" class="nav-button font-semibold py-2 px-3 rounded-lg text-sm">So</button>
+            </div>
+             <button id="today-btn" class="w-full mt-2 text-center text-sm font-semibold text-gray-700 hover:text-black transition">Zurück zu Heute</button>
+        </nav>
+
+        <div id="app" class="app-card rounded-2xl overflow-hidden">
+            <div id="app-header" class="app-header p-6">
+                <h1 id="routine-title" class="text-3xl font-semibold">Lade Routine...</h1>
+                <p id="routine-day" class="text-base" style="color: var(--text-creme-dark);">Bitte einen Moment Geduld.</p>
+            </div>
+            <div class="px-6 pt-6 pb-8 bg-white/5">
+                <ol id="routine-steps" class="space-y-4">
+                    <!-- Steps are inserted dynamically here -->
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Installation Guide -->
+        <div class="install-guide text-center mt-6 p-4 rounded-xl text-sm">
+            <p><strong>Pro-Tipp:</strong> Füge diese Seite zu deinem Startbildschirm hinzu, um sie wie eine App zu nutzen!</p>
+            <p class="mt-1 text-xs text-gray-600">Öffne das Menü deines Browsers (oft •••) und wähle "Zum Startbildschirm hinzufügen".</p>
+        </div>
+    </div>
+    
+    <script>
+        // --- PWA SETUP ---
+        function setupPwa() {
+            const manifestData = {
+                "name": "Skincare Assistent",
+                "short_name": "Skincare",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#F5F1E8",
+                "theme_color": "#4A4F3B",
+                "description": "Dein persönlicher Assistent für die tägliche Hautpflege-Routine.",
+                "icons": [{
+                    "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 rx=%2260%22 fill=%22%234A4F3B%22></rect><text x=%2250%%22 y=%2250%%22 font-size=%22256%22 fill=%22%23F5F1E8%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22serif%22>S</text></svg>",
+                    "sizes": "512x512",
+                    "type": "image/svg+xml"
+                }]
+            };
+            const manifestString = JSON.stringify(manifestData);
+            const manifestBlob = new Blob([manifestString], {type: 'application/json'});
+            const manifestUrl = URL.createObjectURL(manifestBlob);
+            document.getElementById('manifest').setAttribute('href', manifestUrl);
+
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'skincare-assistant-cache-v1';
+                    const urlsToCache = [
+                        '/',
+                        './index.html' // Assumes the file will be named index.html
+                    ];
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+                        );
+                    });
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => response || fetch(event.request))
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl)
+                    .then(reg => console.log('Service worker registered.', reg))
+                    .catch(err => console.error('Service worker registration failed:', err));
+            }
+        }
+        setupPwa();
+
+        // --- DATABASE & GLOBAL STATE ---
+        const routines = {
+            morgen: {
+                title: "Morgenroutine",
+                steps: [
+                    { product: "Nur Lauwarmes Wasser", instruction: "Gesicht sanft reinigen, um die Hautbarriere zu schonen." },
+                    { product: "Nø cosmetics 120H Liquid Hydrator", instruction: "<strong>Ca. 3-4 Tropfen</strong> auf die noch leicht feuchte Haut auftragen und sanft einklopfen." },
+                    { product: "Nø cosmetics All-In Barrier Cream", instruction: "<strong>Eine erbsengroße Menge</strong> auf die noch feuchte Haut auftragen, um die Hydration einzuschließen." },
+                    { product: "Eucerin Sun Protection Oil Control LSF 30", instruction: "<strong>Eine großzügige Menge (ca. 2 Fingerlängen)</strong> als letzten Schritt auftragen. Das ist dein wichtigster Schutz!" }
+                ]
+            },
+            abend_bha: {
+                title: "Abendroutine: BHA",
+                subtitle: "Fokus: Poren tiefenreinigen",
+                steps: [
+                    { product: "Nur Lauwarmes Wasser", instruction: "Gesicht sanft reinigen, um die Haut auf das Peeling vorzubereiten." },
+                    { product: "Nø cosmetics Liquid Refiner (BHA)", instruction: "<strong>Eine 1-Cent große Menge</strong> auf die komplett trockene Haut auftragen. <strong>1-2 Minuten warten!</strong>" },
+                    { product: "Nø cosmetics 120H Liquid Hydrator", instruction: "<strong>Ca. 3-4 Tropfen</strong> auf die Haut auftragen und sanft einklopfen." },
+                    { product: "Nø cosmetics All-In Barrier Cream", instruction: "<strong>Eine erbsengroße Menge</strong> direkt im Anschluss auftragen, um Feuchtigkeit und Wirkstoffe einzuschließen." }
+                ]
+            },
+            abend_aha: {
+                title: "Abendroutine: AHA/PHA",
+                subtitle: "Fokus: Hautbild verfeinern",
+                steps: [
+                    { product: "Nø cosmetics AHA/PHA Peeling Cleanser", instruction: "<strong>Eine haselnussgroße Menge</strong> für 30-60 Sekunden sanft einmassieren, danach gründlich abwaschen." },
+                    { product: "Nø cosmetics 120H Liquid Hydrator", instruction: "<strong>Ca. 3-4 Tropfen</strong> auf die noch leicht feuchte Haut auftragen." },
+                    { product: "Nø cosmetics All-In Barrier Cream", instruction: "<strong>Eine erbsengroße Menge</strong> als letzten Schritt auftragen, um die Hautbarriere zu stärken." }
+                ]
+            },
+            abend_pause: {
+                title: "Abendroutine: Regeneration",
+                subtitle: "Fokus: Hautbarriere stärken",
+                steps: [
+                     { product: "Nur Lauwarmes Wasser", instruction: "Gesicht sanft reinigen. Heute gönnen wir der Haut eine Pause." },
+                     { product: "Nø cosmetics 120H Liquid Hydrator", instruction: "<strong>Eine großzügige Menge (ca. 4-5 Tropfen)</strong> für die Erholung." },
+                     { product: "Nø cosmetics All-In Barrier Cream", instruction: "<strong>Eine erbsengroße Menge</strong> auftragen, um die Haut über Nacht zu reparieren und stärken." }
+                ]
+            }
+        };
+
+        const days = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+        const eveningSchedule = [ routines.abend_pause, routines.abend_bha, routines.abend_aha, routines.abend_pause, routines.abend_bha, routines.abend_aha, routines.abend_bha ];
+
+        let selectedDayIndex;
+        let selectedTimeOfDay;
+
+        function getEffectiveInfo() {
+            const now = new Date();
+            let dayOfWeek = now.getDay();
+            const hour = now.getHours();
+            if (hour < 5) { dayOfWeek = (dayOfWeek - 1 + 7) % 7; }
+            const timeOfDay = (hour >= 5 && hour < 16) ? 'morgen' : 'abend';
+            return { dayIndex: dayOfWeek, timeOfDay: timeOfDay };
+        }
+
+        function displayRoutine() {
+            let routineToShow;
+            let daySubtitle = '';
+            const dayName = days[selectedDayIndex];
+            if (selectedTimeOfDay === 'morgen') {
+                routineToShow = routines.morgen;
+                daySubtitle = `${dayName} Morgen.`;
+            } else {
+                routineToShow = eveningSchedule[selectedDayIndex];
+                daySubtitle = `${dayName} Abend: ${routineToShow.subtitle}`;
+            }
+            document.getElementById('routine-title').textContent = routineToShow.title;
+            document.getElementById('routine-day').textContent = daySubtitle;
+            const stepsElement = document.getElementById('routine-steps');
+            stepsElement.innerHTML = ''; 
+            routineToShow.steps.forEach((step, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start space-x-4';
+                li.innerHTML = `
+                    <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-white/10 rounded-full font-semibold text-lg border-2 border-white/20" style="color: var(--text-creme-dark);">${index + 1}</div>
+                    <div class="flex-1 pt-1">
+                        <h3 class="font-semibold text-base" style="color: var(--text-creme-light);">${step.product}</h3>
+                        <p class="text-sm" style="color: var(--text-creme-dark);">${step.instruction}</p>
+                    </div>`;
+                stepsElement.appendChild(li);
+            });
+            document.querySelectorAll('.day-nav button').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.day) === selectedDayIndex));
+            document.querySelectorAll('.time-nav button').forEach(btn => btn.classList.toggle('active', btn.dataset.time === selectedTimeOfDay));
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialInfo = getEffectiveInfo();
+            selectedDayIndex = initialInfo.dayIndex;
+            selectedTimeOfDay = initialInfo.timeOfDay;
+            displayRoutine();
+            document.querySelectorAll('.day-nav button').forEach(btn => btn.addEventListener('click', () => { selectedDayIndex = parseInt(btn.dataset.day); displayRoutine(); }));
+            document.querySelectorAll('.time-nav button').forEach(btn => btn.addEventListener('click', () => { selectedTimeOfDay = btn.dataset.time; displayRoutine(); }));
+            document.getElementById('today-btn').addEventListener('click', () => { const todayInfo = getEffectiveInfo(); selectedDayIndex = todayInfo.dayIndex; selectedTimeOfDay = todayInfo.timeOfDay; displayRoutine(); });
+        });
+    </script>
+</body>
+</html>
+
+
